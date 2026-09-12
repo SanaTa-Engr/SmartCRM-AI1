@@ -13,6 +13,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { DashboardMetrics, Lead, Deal, Task, Activity } from '../types';
+import { PipelineCharts } from './PipelineCharts';
 
 interface DashboardViewProps {
   metrics: DashboardMetrics | null;
@@ -180,6 +181,9 @@ export function DashboardView({
           </p>
         </div>
       </div>
+
+      {/* Visual Analytics: Deal Pipeline Value & Lead Funnel Distribution */}
+      <PipelineCharts deals={deals} leads={leads} onNavigate={onNavigate} />
 
       {/* Middle Grid: Pipeline Distribution + AI Hot Leads */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

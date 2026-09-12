@@ -94,12 +94,19 @@ export function Sidebar({
         <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800">
           {!isCollapsed ? (
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-400 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20 shrink-0">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div className="leading-tight">
-                <span className="font-bold text-white text-base tracking-tight block">SmartCRM AI</span>
-                <span className="text-[11px] font-medium text-indigo-400 tracking-wider uppercase block">Hackathon Edition</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white text-base tracking-tight">SmartCRM</span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-indigo-950 border border-indigo-700/60 text-indigo-400 text-[10px] font-bold leading-none">
+                    AI
+                  </span>
+                </div>
+                <span className="text-[11px] font-medium text-sky-400 tracking-wide block mt-0.5">
+                  B2B SaaS Engine
+                </span>
               </div>
             </div>
           ) : (

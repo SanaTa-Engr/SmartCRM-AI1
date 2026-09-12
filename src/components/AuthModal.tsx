@@ -102,7 +102,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
             className="w-full mb-5 py-2.5 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 border border-indigo-200 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-xs"
           >
             <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span>1-Click Hackathon Demo Login (Alex Morgan)</span>
+            <span>1-Click Demo Login (Alex Morgan)</span>
           </button>
 
           <div className="relative flex py-2 items-center mb-5">
