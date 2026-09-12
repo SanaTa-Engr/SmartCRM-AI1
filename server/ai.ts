@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import { Lead, Contact, Deal, Activity } from '../src/types';
+import { Lead, Contact, Deal, Activity, DashboardMetrics } from '../src/types';
+import { generateSmartSalesResponse } from '../src/aiEngine';
 
 let aiClient: GoogleGenAI | null = null;
 
@@ -364,27 +365,55 @@ Provide direct, actionable, expert guidance for sales teams. Answer questions cl
     }
   }
 
-  // Fallback intelligent response generator
-  const q = userMessage.toLowerCase();
-  let content = '';
-
-  if (q.includes('pipeline') || q.includes('health') || q.includes('stats') || q.includes('forecast')) {
-    content = `Here is your current **Sales Pipeline Health Summary**:\n\n• **Total Open Pipeline Value**: $${(crmContext.totalPipelineValue || 205000).toLocaleString()}\n• **Weighted Expected Revenue**: $${(crmContext.weightedPipelineValue || 135000).toLocaleString()}\n• **Closed Won ARR**: $${(crmContext.closedWonValue || 139000).toLocaleString()}\n• **Active Deals in Flight**: ${crmContext.openDeals || 3} deals\n• **Active Leads**: ${crmContext.activeLeads || 4} prospects\n\n**Recommendation**: Focus team bandwidth on advancing the top Negotiation stage deal (Apex BioHealth at $65k) which has an 80% win probability and clear BAA signoff path.`;
-  } else if (q.includes('lead') || q.includes('who to call') || q.includes('contact')) {
-    content = `Based on AI Lead Scoring, your **Top 2 Priority Leads Today** are:\n\n1. **Dr. Marcus Vance (Apex BioHealth)** — **Score: 94/100 (Hot)**\n   *Reason*: CIO with approved budget in Proposal stage ($65,000 value).\n   *Action*: Send revised BAA addendum.\n\n2. **Elena Rostova (CloudScale Infrastructure)** — **Score: 87/100 (Warm)**\n   *Reason*: Evaluator with strong technical fit ($48,000 value).\n   *Action*: Share ROI calculator and sandbox login.\n\nWould you like me to draft customized outreach emails for either of these leads?`;
-  } else if (q.includes('email') || q.includes('draft') || q.includes('message')) {
-    content = `Here is a high-impact follow-up template you can use immediately:\n\n**Subject**: Next steps regarding your CRM AI deployment\n\nHi [Name],\n\nFollowing our recent walkthrough, I wanted to share how similar engineering teams achieved a 35% reduction in administrative overhead by leveraging SmartCRM's automated workflows.\n\nGiven your team's timeline, do you have 15 minutes this Thursday at 2 PM ET to review the tailored proposal?\n\nBest regards,\nAlex Morgan\nSmartCRM AI`;
-  } else {
-    content = `I'm your **SmartCRM AI Assistant**. I can analyze your pipeline, score prospects, draft follow-up emails, provide deal closing recommendations, and summarize activity logs.\n\nCurrent metrics indicate **$${(crmContext.totalPipelineValue || 205000).toLocaleString()}** in active pipeline opportunities across **${crmContext.activeLeads || 4} active leads**. What would you like to explore next?`;
-  }
-
-  return {
-    content,
-    suggestions: [
-      'Show me our highest scoring leads to contact',
-      'What are our top revenue opportunities?',
-      'Draft a follow-up email for Dr. Marcus Vance',
-      'Analyze overall pipeline conversion rate',
-    ],
+  // Fallback intelligent multi-intent response generator
+  const metrics: DashboardMetrics = {
+    totalContacts: crmContext.totalContacts || 5,
+    activeLeads: crmContext.activeLeads || 4,
+    openDeals: crmContext.openDeals || 3,
+    totalPipelineValue: crmContext.totalPipelineValue || 205000,
+    weightedPipelineValue: crmContext.weightedPipelineValue || 135000,
+    closedWonValue: crmContext.closedWonValue || 139000,
+    pendingTasks: crmContext.pendingTasks || 3,
+    completedTasks: 5,
+    winRatePercentage: crmContext.winRatePercentage || 40,
   };
+
+  const deals = (crmContext.topDeals || []).map((d: any, idx: number) => ({
+    id: 'deal-' + idx,
+    userId: 'usr-demo-1',
+    title: d.title || 'Enterprise Deal',
+    value: d.value || 25000,
+    stage: d.stage || 'Proposal',
+    probability: d.probability || 60,
+    expectedCloseDate: '2026-09-30',
+    companyName: d.companyName || d.title?.split(' ')[0] || 'Enterprise Client',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
+
+  const leads = (crmContext.topLeads || []).map((l: any, idx: number) => ({
+    id: 'lead-' + idx,
+    userId: 'usr-demo-1',
+    name: l.name || 'Lead Contact',
+    email: 'contact@example.com',
+    phone: '555-0199',
+    company: l.company || 'Prospect Co',
+    title: 'Decision Maker',
+    stage: l.stage || 'Qualified',
+    estimatedValue: l.value || 30000,
+    source: 'Website Inbound',
+    score: l.score || 85,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
+
+  return generateSmartSalesResponse(messages, {
+    metrics,
+    deals,
+    leads,
+    contacts: [],
+    tasks: [],
+    userName: 'Alex Morgan',
+    companyName: 'SmartCRM AI',
+  });
 }

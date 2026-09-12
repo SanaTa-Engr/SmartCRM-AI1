@@ -13,6 +13,7 @@ import {
   LeadStage,
 } from './types';
 import { getSeedData } from '../server/seedData';
+import { generateSmartSalesResponse } from './aiEngine';
 
 const DEMO_USER: User = {
   id: 'usr-demo-1',
@@ -600,29 +601,22 @@ ${this.getCurrentUser().companyName || 'SmartCRM AI'}`,
   }
 
   chatWithAI(messages: { role: 'user' | 'assistant'; content: string }[]) {
-    const lastMsg = messages[messages.length - 1]?.content.toLowerCase() || '';
     const metrics = this.getDashboardMetrics();
+    const deals = this.getDeals();
+    const leads = this.getLeads();
+    const contacts = this.getContacts();
+    const tasks = this.getTasks();
+    const user = this.getCurrentUser();
 
-    let reply = `Based on your CRM data, you currently have **$${metrics.totalPipelineValue.toLocaleString()}** in total pipeline value across **${metrics.openDeals} open deals**, with a win rate of **${metrics.winRatePercentage}%**.`;
-
-    if (lastMsg.includes('lead') || lastMsg.includes('score')) {
-      reply += `\n\nYour active leads are performing well. You have **${metrics.activeLeads} active leads**. I recommend focusing on high-tier leads in the Proposal and Qualified stages to drive conversions this month.`;
-    } else if (lastMsg.includes('task') || lastMsg.includes('todo')) {
-      reply += `\n\nYou have **${metrics.pendingTasks} pending tasks** requiring attention. Completing high-priority follow-up tasks within 24 hours has historically increased deal velocity by 34%.`;
-    } else if (lastMsg.includes('revenue') || lastMsg.includes('deal')) {
-      reply += `\n\nYour weighted pipeline value is **$${metrics.weightedPipelineValue.toLocaleString()}**, with **$${metrics.closedWonValue.toLocaleString()}** already closed won. Pipeline coverage is strong.`;
-    } else {
-      reply += `\n\nHow can I help you accelerate sales today? I can draft follow-up emails, score new prospects, or analyze deal health.`;
-    }
-
-    return {
-      content: reply,
-      suggestions: [
-        'Show deals closing this month',
-        'Identify leads requiring immediate follow-up',
-        'Draft an executive sales pipeline summary',
-      ],
-    };
+    return generateSmartSalesResponse(messages, {
+      metrics,
+      deals,
+      leads,
+      contacts,
+      tasks,
+      userName: user.name,
+      companyName: user.companyName,
+    });
   }
 }
 
