@@ -14,6 +14,7 @@ import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
 
 import { LeadModal } from './components/modals/LeadModal';
+import { LeadImportModal } from './components/modals/LeadImportModal';
 import { DealModal } from './components/modals/DealModal';
 import { ContactModal } from './components/modals/ContactModal';
 import { CompanyModal } from './components/modals/CompanyModal';
@@ -61,6 +62,7 @@ export default function App() {
 
   // Modals state
   const [leadModalOpen, setLeadModalOpen] = useState(false);
+  const [leadImportOpen, setLeadImportOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   const [dealModalOpen, setDealModalOpen] = useState(false);
@@ -548,6 +550,7 @@ export default function App() {
                   setEditingLead(null);
                   setLeadModalOpen(true);
                 }}
+                onOpenImport={() => setLeadImportOpen(true)}
                 onEditLead={lead => {
                   setEditingLead(lead);
                   setLeadModalOpen(true);
@@ -631,6 +634,15 @@ export default function App() {
         lead={editingLead}
         onClose={() => setLeadModalOpen(false)}
         onSave={handleSaveLead}
+      />
+
+      <LeadImportModal
+        isOpen={leadImportOpen}
+        existingLeads={leads}
+        onClose={() => setLeadImportOpen(false)}
+        onImportSuccess={async () => {
+          await loadData();
+        }}
       />
 
       <DealModal

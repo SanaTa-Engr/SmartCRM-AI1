@@ -15,12 +15,14 @@ import {
   ChevronRight,
   AlertCircle,
   TrendingUp,
+  Upload,
 } from 'lucide-react';
 import { Lead, LeadStage } from '../types';
 
 interface LeadsViewProps {
   leads: Lead[];
   onAddLead: () => void;
+  onOpenImport?: () => void;
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (id: string) => void;
   onStageChange: (lead: Lead, newStage: LeadStage) => void;
@@ -42,6 +44,7 @@ const STAGES: { id: LeadStage; label: string; color: string; badgeColor: string 
 export function LeadsView({
   leads,
   onAddLead,
+  onOpenImport,
   onEditLead,
   onDeleteLead,
   onStageChange,
@@ -124,6 +127,18 @@ export function LeadsView({
               <span className="hidden md:inline">Table</span>
             </button>
           </div>
+
+          {/* Import Leads button */}
+          {onOpenImport && (
+            <button
+              onClick={onOpenImport}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-semibold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Import leads from CSV or Excel file"
+            >
+              <Upload className="w-4 h-4 text-indigo-600" />
+              <span>Import Leads</span>
+            </button>
+          )}
 
           {/* Add lead button */}
           <button

@@ -393,6 +393,24 @@
   ],
   "leads": [
     {
+      "id": "lead-a9dfd1d8",
+      "userId": "usr-demo-1",
+      "name": "Sarah Jenkins",
+      "email": "sarah.jenkins@nexusdyn.test",
+      "phone": "+1-555-0199",
+      "company": "Nexus Dynamics",
+      "title": "",
+      "stage": "Qualified",
+      "estimatedValue": 50000,
+      "source": "Inbound Web",
+      "score": 50,
+      "scoreReason": "Imported from test_upload.csv",
+      "nextAction": "Schedule introductory qualification call",
+      "assignedTo": "You",
+      "createdAt": "2026-09-12T17:46:58.612Z",
+      "updatedAt": "2026-09-12T17:46:58.612Z"
+    },
+    {
       "name": "Sophia Laurent",
       "email": "sophia@luxeaero.com",
       "phone": "",
@@ -1070,6 +1088,37 @@
   ],
   "activities": [
     {
+      "id": "act-07eda94b",
+      "userId": "usr-demo-1",
+      "type": "note",
+      "description": "Imported 0 leads from \"test_upload2.csv\" (1 duplicates skipped, 0 invalid rows skipped)",
+      "entityType": "lead",
+      "entityName": "0 Leads",
+      "metadata": {
+        "filename": "test_upload2.csv",
+        "importedCount": 0,
+        "skippedCount": 1,
+        "invalidCount": 0
+      },
+      "createdAt": "2026-09-12T17:47:02.768Z"
+    },
+    {
+      "id": "act-038e8861",
+      "userId": "usr-demo-1",
+      "type": "note",
+      "description": "Imported 1 leads from \"test_upload.csv\" (0 duplicates skipped, 0 invalid rows skipped)",
+      "entityType": "lead",
+      "entityId": "lead-a9dfd1d8",
+      "entityName": "1 Leads",
+      "metadata": {
+        "filename": "test_upload.csv",
+        "importedCount": 1,
+        "skippedCount": 0,
+        "invalidCount": 0
+      },
+      "createdAt": "2026-09-12T17:46:58.612Z"
+    },
+    {
       "id": "act-eee2cade",
       "userId": "usr-5938e27e-31c9-46b2-94ea-03a61adcbaa6",
       "type": "ai_analysis",
@@ -1238,6 +1287,38 @@
       "entityId": "lead-4",
       "entityName": "Julian Mercer",
       "createdAt": "2026-09-12T06:00:34.096Z"
+    }
+  ],
+  "leadImportHistory": [
+    {
+      "id": "imp-8dc3eb99",
+      "userId": "usr-demo-1",
+      "filename": "test_upload2.csv",
+      "totalRows": 1,
+      "importedCount": 0,
+      "skippedCount": 1,
+      "invalidCount": 0,
+      "status": "failed",
+      "errors": [
+        {
+          "row": 1,
+          "field": "email",
+          "message": "Duplicate email: Lead already exists in CRM with email \"sarah.jenkins@nexusdyn.test\""
+        }
+      ],
+      "createdAt": "2026-09-12T17:47:02.768Z"
+    },
+    {
+      "id": "imp-c7aabd87",
+      "userId": "usr-demo-1",
+      "filename": "test_upload.csv",
+      "totalRows": 1,
+      "importedCount": 1,
+      "skippedCount": 0,
+      "invalidCount": 0,
+      "status": "completed",
+      "errors": [],
+      "createdAt": "2026-09-12T17:46:58.612Z"
     }
   ]
 }

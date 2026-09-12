@@ -9,6 +9,8 @@ import {
   Activity,
   DashboardMetrics,
   SalesPipelineReport,
+  LeadImportRecord,
+  LeadImportResult,
 } from './types';
 
 import { clientStore } from './clientStore';
@@ -101,6 +103,12 @@ function handleClientFallback<T>(path: string, options: RequestInit = {}): T {
   }
 
   // Leads
+  if (cleanPath === '/api/leads/import-history' || cleanPath === '/leads/import-history') {
+    return clientStore.getImportHistory() as unknown as T;
+  }
+  if (cleanPath === '/api/leads/import' || cleanPath === '/leads/import') {
+    return clientStore.importLeads(body) as unknown as T;
+  }
   if (cleanPath === '/api/leads' || cleanPath === '/leads') {
     if (method === 'POST') return clientStore.createLead(body) as unknown as T;
     return clientStore.getLeads() as unknown as T;
@@ -305,6 +313,12 @@ export const api = {
   },
   async deleteLead(id: string) {
     return request<{ success: boolean }>(`/api/leads/${id}`, { method: 'DELETE' });
+  },
+  async importLeads(data: { filename: string; leads: Partial<Lead>[]; skipDuplicates?: boolean }) {
+    return request<LeadImportResult>('/api/leads/import', { method: 'POST', body: JSON.stringify(data) });
+  },
+  async getLeadImportHistory() {
+    return request<LeadImportRecord[]>('/api/leads/import-history');
   },
 
   // Deals

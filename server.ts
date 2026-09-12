@@ -236,6 +236,30 @@ app.get('/api/leads', (req, res) => {
   res.json(db.getLeads(userId));
 });
 
+// Automated Lead Import API (must be before :id route)
+app.get('/api/leads/import-history', (req, res) => {
+  const userId = getUserId(req);
+  res.json(db.getImportHistory(userId));
+});
+
+app.post('/api/leads/import', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { filename, leads, skipDuplicates } = req.body;
+    if (!Array.isArray(leads) || leads.length === 0) {
+      return res.status(400).json({ error: 'No lead records provided for import' });
+    }
+    const result = await db.importLeads(userId, {
+      filename: filename || 'leads_import.csv',
+      leads,
+      skipDuplicates: skipDuplicates !== false,
+    });
+    res.status(201).json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Import failed' });
+  }
+});
+
 app.get('/api/leads/:id', (req, res) => {
   const userId = getUserId(req);
   const lead = db.getLead(userId, req.params.id);
@@ -283,30 +307,6 @@ app.delete('/api/leads/:id', (req, res) => {
   const userId = getUserId(req);
   const ok = db.deleteLead(userId, req.params.id);
   res.json({ success: ok });
-});
-
-// Automated Lead Import API
-app.get('/api/leads/import-history', (req, res) => {
-  const userId = getUserId(req);
-  res.json(db.getImportHistory(userId));
-});
-
-app.post('/api/leads/import', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const { filename, leads, skipDuplicates } = req.body;
-    if (!Array.isArray(leads) || leads.length === 0) {
-      return res.status(400).json({ error: 'No lead records provided for import' });
-    }
-    const result = await db.importLeads(userId, {
-      filename: filename || 'leads_import.csv',
-      leads,
-      skipDuplicates: skipDuplicates !== false,
-    });
-    res.status(201).json(result);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Import failed' });
-  }
 });
 
 // --- Deals API ---
