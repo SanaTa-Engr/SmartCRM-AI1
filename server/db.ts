@@ -21,7 +21,8 @@ interface DatabaseSchema {
   activities: Activity[];
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+const DATA_DIR = IS_SERVERLESS ? path.join('/tmp', 'crm-data') : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'crm-db.json');
 
 class DatabaseService {

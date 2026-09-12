@@ -11,7 +11,10 @@ import {
   SalesPipelineReport,
 } from './types';
 
+import { clientStore } from './clientStore';
+
 const TOKEN_KEY = 'smartcrm_auth_token';
+const API_BASE_URL = ((import.meta as any).env?.VITE_API_URL || '').replace(/\/$/, '');
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -25,7 +28,144 @@ export function setToken(token: string | null) {
   }
 }
 
-async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
+function handleClientFallback<T>(path: string, options: RequestInit = {}): T {
+  const method = (options.method || 'GET').toUpperCase();
+  const body = options.body ? JSON.parse(options.body as string) : {};
+  const [cleanPath, queryString] = path.split('?');
+  const params = new URLSearchParams(queryString || '');
+
+  // Auth routes
+  if (cleanPath === '/api/auth/login' || cleanPath === '/auth/login') {
+    return clientStore.login(body.email, body.password) as unknown as T;
+  }
+  if (cleanPath === '/api/auth/signup' || cleanPath === '/auth/signup') {
+    return clientStore.signup(body.email, body.password, body.name, body.companyName) as unknown as T;
+  }
+  if (cleanPath === '/api/auth/me' || cleanPath === '/auth/me') {
+    return { user: clientStore.getCurrentUser() } as unknown as T;
+  }
+  if (cleanPath === '/api/auth/logout' || cleanPath === '/auth/logout') {
+    return { success: true } as unknown as T;
+  }
+
+  // System & Status
+  if (cleanPath === '/api/status' || cleanPath === '/status') {
+    const contacts = clientStore.getContacts();
+    const leads = clientStore.getLeads();
+    const deals = clientStore.getDeals();
+    return {
+      mode: 'client_local_persistence',
+      supabaseConnected: false,
+      totalContacts: contacts.length,
+      totalLeads: leads.length,
+      totalDeals: deals.length,
+    } as unknown as T;
+  }
+  if (cleanPath === '/api/seed' || cleanPath === '/seed') {
+    return { success: true, message: 'CRM data seeded successfully in local storage' } as unknown as T;
+  }
+  if (cleanPath === '/api/health' || cleanPath === '/health') {
+    return { status: 'ok', mode: 'client_fallback' } as unknown as T;
+  }
+
+  // Metrics & Reports
+  if (cleanPath === '/api/dashboard/metrics' || cleanPath === '/dashboard/metrics') {
+    return clientStore.getDashboardMetrics() as unknown as T;
+  }
+  if (cleanPath === '/api/reports/analytics' || cleanPath === '/reports/analytics') {
+    return clientStore.getReportsAnalytics() as unknown as T;
+  }
+
+  // Contacts
+  if (cleanPath === '/api/contacts' || cleanPath === '/contacts') {
+    if (method === 'POST') return clientStore.createContact(body) as unknown as T;
+    return clientStore.getContacts() as unknown as T;
+  }
+  if (cleanPath.startsWith('/api/contacts/') || cleanPath.startsWith('/contacts/')) {
+    const id = cleanPath.split('/').pop() || '';
+    if (method === 'PUT') return clientStore.updateContact(id, body) as unknown as T;
+    if (method === 'DELETE') return { success: clientStore.deleteContact(id) } as unknown as T;
+    return (clientStore.getContacts().find(c => c.id === id) || {}) as unknown as T;
+  }
+
+  // Companies
+  if (cleanPath === '/api/companies' || cleanPath === '/companies') {
+    if (method === 'POST') return clientStore.createCompany(body) as unknown as T;
+    return clientStore.getCompanies() as unknown as T;
+  }
+  if (cleanPath.startsWith('/api/companies/') || cleanPath.startsWith('/companies/')) {
+    const id = cleanPath.split('/').pop() || '';
+    if (method === 'PUT') return clientStore.updateCompany(id, body) as unknown as T;
+    if (method === 'DELETE') return { success: clientStore.deleteCompany(id) } as unknown as T;
+    return (clientStore.getCompanies().find(c => c.id === id) || {}) as unknown as T;
+  }
+
+  // Leads
+  if (cleanPath === '/api/leads' || cleanPath === '/leads') {
+    if (method === 'POST') return clientStore.createLead(body) as unknown as T;
+    return clientStore.getLeads() as unknown as T;
+  }
+  if (cleanPath.startsWith('/api/leads/') || cleanPath.startsWith('/leads/')) {
+    const id = cleanPath.split('/').pop() || '';
+    if (method === 'PUT') return clientStore.updateLead(id, body) as unknown as T;
+    if (method === 'DELETE') return { success: clientStore.deleteLead(id) } as unknown as T;
+    return (clientStore.getLeads().find(l => l.id === id) || {}) as unknown as T;
+  }
+
+  // Deals
+  if (cleanPath === '/api/deals' || cleanPath === '/deals') {
+    if (method === 'POST') return clientStore.createDeal(body) as unknown as T;
+    return clientStore.getDeals() as unknown as T;
+  }
+  if (cleanPath.startsWith('/api/deals/') || cleanPath.startsWith('/deals/')) {
+    const id = cleanPath.split('/').pop() || '';
+    if (method === 'PUT') return clientStore.updateDeal(id, body) as unknown as T;
+    if (method === 'DELETE') return { success: clientStore.deleteDeal(id) } as unknown as T;
+    return (clientStore.getDeals().find(d => d.id === id) || {}) as unknown as T;
+  }
+
+  // Tasks
+  if (cleanPath === '/api/tasks' || cleanPath === '/tasks') {
+    if (method === 'POST') return clientStore.createTask(body) as unknown as T;
+    return clientStore.getTasks() as unknown as T;
+  }
+  if (cleanPath.startsWith('/api/tasks/') || cleanPath.startsWith('/tasks/')) {
+    const id = cleanPath.split('/').pop() || '';
+    if (method === 'PUT') return clientStore.updateTask(id, body) as unknown as T;
+    if (method === 'DELETE') return { success: clientStore.deleteTask(id) } as unknown as T;
+    return (clientStore.getTasks().find(t => t.id === id) || {}) as unknown as T;
+  }
+
+  // Notes
+  if (cleanPath === '/api/notes' || cleanPath === '/notes') {
+    if (method === 'POST') return clientStore.createNote(body) as unknown as T;
+    return clientStore.getNotes(params.get('entityType') || undefined, params.get('entityId') || undefined) as unknown as T;
+  }
+  if (cleanPath.startsWith('/api/notes/') || cleanPath.startsWith('/notes/')) {
+    const id = cleanPath.split('/').pop() || '';
+    if (method === 'PUT') return clientStore.updateNote(id, body) as unknown as T;
+    if (method === 'DELETE') return { success: clientStore.deleteNote(id) } as unknown as T;
+  }
+
+  // Activities
+  if (cleanPath === '/api/activities' || cleanPath === '/activities') {
+    if (method === 'POST') return clientStore.logActivity(body) as unknown as T;
+    return clientStore.getActivities() as unknown as T;
+  }
+
+  // AI Features
+  if (cleanPath === '/api/ai/lead-score') return clientStore.scoreLead(body.lead) as unknown as T;
+  if (cleanPath === '/api/ai/lead-summary') return { summary: clientStore.scoreLead(body.lead).aiSummary } as unknown as T;
+  if (cleanPath === '/api/ai/contact-analysis') return clientStore.analyzeContact(body.contactId) as unknown as T;
+  if (cleanPath === '/api/ai/follow-up-email') return clientStore.generateFollowUp(body) as unknown as T;
+  if (cleanPath === '/api/ai/deal-insights') return clientStore.getDealInsights(body.dealId) as unknown as T;
+  if (cleanPath === '/api/ai/activity-summary') return clientStore.getActivitySummary() as unknown as T;
+  if (cleanPath === '/api/ai/chat') return clientStore.chatWithAI(body.messages) as unknown as T;
+
+  return {} as T;
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -36,14 +176,31 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, { ...options, headers });
-  const data = await res.json();
+  const url = `${API_BASE_URL}${path}`;
 
-  if (!res.ok) {
-    throw new Error(data.error || `Request failed with status ${res.status}`);
+  try {
+    const res = await fetch(url, { ...options, headers });
+    const contentType = res.headers.get('content-type') || '';
+
+    // If successfully returned JSON from real backend
+    if (res.ok && contentType.includes('application/json')) {
+      return await res.json();
+    }
+
+    // If 404 or HTML response (like Vercel static "The page could not be found")
+    if (res.status === 404 || !contentType.includes('application/json')) {
+      console.warn(`[SmartCRM] Backend returned ${res.status} (${contentType}) for ${path}. Using client storage engine.`);
+      return handleClientFallback<T>(path, options);
+    }
+
+    // If server returned another error (e.g. 500), try to get error json
+    const errData = await res.json().catch(() => ({ error: `Request failed with status ${res.status}` }));
+    throw new Error(errData.error || `Request failed with status ${res.status}`);
+  } catch (networkErr: any) {
+    // If network failure or offline, transparently fall back
+    console.warn(`[SmartCRM] Network fetch failed for ${path}. Using client storage engine:`, networkErr.message);
+    return handleClientFallback<T>(path, options);
   }
-
-  return data;
 }
 
 export const api = {

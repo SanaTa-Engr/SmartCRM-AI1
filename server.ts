@@ -20,6 +20,17 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Normalize /api prefix if stripped by reverse proxies or Vercel serverless rewrites
+app.use((req, res, next) => {
+  if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/src') && !req.url.startsWith('/@') && !req.url.startsWith('/node_modules')) {
+    const isApiPath = /^\/(auth|contacts|companies|leads|deals|tasks|notes|activities|dashboard|reports|ai|health|status)/.test(req.url);
+    if (isApiPath) {
+      req.url = '/api' + req.url;
+    }
+  }
+  next();
+});
+
 // Auth helper middleware
 function getUserId(req: Request): string {
   const authHeader = req.headers.authorization;
@@ -583,4 +594,9 @@ async function startServer() {
   });
 }
 
-startServer();
+export { app };
+export default app;
+
+if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  startServer();
+}

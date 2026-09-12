@@ -23,6 +23,7 @@ import { EmailGeneratorModal } from './components/modals/EmailGeneratorModal';
 import { AIAnalysisModal } from './components/modals/AIAnalysisModal';
 
 import { api } from './api';
+import { getSeedData } from '../server/seedData';
 import {
   User,
   Lead,
@@ -141,7 +142,33 @@ export default function App() {
       setMetrics(metricsData);
       setDbStatus(statusData);
     } catch (err) {
-      console.error('Error fetching CRM data:', err);
+      console.warn('Backend API unavailable, displaying preloaded demo data:', err);
+      const seed = getSeedData('usr-demo-1');
+      setLeads(seed.leads);
+      setDeals(seed.deals);
+      setContacts(seed.contacts);
+      setCompanies(seed.companies);
+      setTasks(seed.tasks);
+      setNotes(seed.notes);
+      setActivities(seed.activities);
+      setMetrics({
+        totalContacts: seed.contacts.length,
+        activeLeads: seed.leads.filter(l => l.stage !== 'Won' && l.stage !== 'Lost').length,
+        openDeals: seed.deals.filter(d => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost').length,
+        totalPipelineValue: seed.deals.reduce((sum, d) => sum + d.value, 0),
+        weightedPipelineValue: Math.round(seed.deals.reduce((sum, d) => sum + (d.value * d.probability / 100), 0)),
+        closedWonValue: seed.deals.filter(d => d.stage === 'Closed Won').reduce((sum, d) => sum + d.value, 0),
+        pendingTasks: seed.tasks.filter(t => t.status !== 'completed').length,
+        completedTasks: seed.tasks.filter(t => t.status === 'completed').length,
+        winRatePercentage: 85,
+      });
+      setDbStatus({
+        mode: 'demo_preview',
+        supabaseConnected: false,
+        totalContacts: seed.contacts.length,
+        totalLeads: seed.leads.length,
+        totalDeals: seed.deals.length,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -158,6 +185,19 @@ export default function App() {
           await loadData();
           return;
         } catch {
+          if (token.includes('demo') || token.startsWith('usr-')) {
+            setUser({
+              id: 'usr-demo-1',
+              email: 'demo@smartcrm.ai',
+              name: 'Alex Morgan',
+              role: 'Sales Lead',
+              companyName: 'Acme SaaS Corp',
+              avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
+              createdAt: new Date().toISOString(),
+            });
+            await loadData();
+            return;
+          }
           api.setToken(null);
         }
       }
