@@ -58,6 +58,16 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Standalone PRD Document Routes (not included in CRM UI)
+app.get('/SmartCRM_AI_Product_Requirements_Document.pdf', (req, res) => {
+  const filePath = path.join(process.cwd(), 'public', 'SmartCRM_AI_Product_Requirements_Document.pdf');
+  res.download(filePath, 'SmartCRM_AI_Product_Requirements_Document.pdf');
+});
+
+app.get('/prd.html', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'prd.html'));
+});
+
 // Health & System status
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

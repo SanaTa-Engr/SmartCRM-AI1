@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartCRM AI - Product Requirements Document (PRD)</title>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; color: #000 !important; font-size: 11pt !important; }
+      .container { max-width: 100% !important; box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+      .page-break { page-break-before: always; }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #1e293b;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+      padding: 50px 60px;
+    }
+    .top-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+      border: 1px solid #4338ca;
+    }
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+    .btn-secondary {
+      background: #f8fafc;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+    .header-bar {
+      border-left: 5px solid #4f46e5;
+      padding-left: 18px;
+      margin-bottom: 30px;
+    }
+    .app-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+    .doc-subtitle {
+      font-size: 17px;
+      font-weight: 600;
+      color: #4f46e5;
+      margin-top: 4px;
+    }
+    .meta-bar {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 8px;
+    }
+    .callout {
+      background: #f8fafc;
+      border-left: 4px solid #4f46e5;
+      border-radius: 0 8px 8px 0;
+      padding: 18px 22px;
+      margin: 24px 0;
+    }
+    .callout h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .callout p {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.5;
+    }
+    h2 {
+      font-size: 19px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 32px 0 14px 0;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid #e2e8f0;
+    }
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 18px 0 8px 0;
+    }
+    p, li {
+      font-size: 13.5px;
+      color: #334155;
+      line-height: 1.65;
+    }
+    ul {
+      margin-left: 20px;
+      margin-bottom: 14px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    strong {
+      color: #0f172a;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px 0;
+      font-size: 12.5px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border: 1px solid #e2e8f0;
+    }
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 11px;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-actions no-print">
+      <div>
+        <span class="badge">Standalone Document</span>
+        <span style="font-size: 12px; color: #64748b; margin-left: 8px;">Not included inside application UI</span>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <a href="/SmartCRM_AI_Product_Requirements_Document.pdf" download class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download PDF Document
+        </a>
+        <button onclick="window.print()" class="btn btn-secondary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print / Save via Browser
+        </button>
+      </div>
+    </div>
+
+    <div class="header-bar">
+      <h1 class="app-title">SmartCRM AI</h1>
+      <div class="doc-subtitle">Product Requirements Document (PRD)</div>
+      <div class="meta-bar">Document Version 2.4 &bull; Target Audience: Product Management, Engineering, RevOps &bull; Date: September 2026</div>
+    </div>
+
+    <div class="callout">
+      <h4>Executive Summary</h4>
+      <p>SmartCRM AI is an intelligent, high-velocity customer relationship management platform engineered for B2B sales development reps (SDRs), account executives (AEs), and revenue leaders. Built upon a reactive full-stack architecture and integrated with Google Gemini AI models, the platform eliminates repetitive manual overhead through predictive lead scoring, instant executive summaries, contextual outreach drafting, an automated lead import pipeline, and an always-on conversational sales copilot.</p>
+    </div>
+
+    <h2>1. Product Vision & Strategic Objectives</h2>
+    <p>Modern B2B revenue teams lose up to 40% of their selling hours to tedious administrative data entry, fragmented communication channels, and poor pipeline hygiene. SmartCRM AI fundamentally re-envisions the CRM experience from an administrative tracking burden into an active, prescriptive revenue engine.</p>
+
+    <h3>1.1 Core Strategic Value Drivers</h3>
+    <ul>
+      <li><strong>Predictive Lead Triage:</strong> Quantitatively scores inbound prospects (0-100) using firmographics, budget tier, and intent signals while providing human-readable AI rationales.</li>
+      <li><strong>Zero-Friction Workflow:</strong> Generates executive lead dossiers and personalized sales email drafts with single-click actions.</li>
+      <li><strong>High-Throughput Ingestion:</strong> Ingests up to 10MB of CSV and Excel data, automatically mapping columns, detecting duplicates, and normalizing lead channels.</li>
+      <li><strong>Predictable Revenue Forecasting:</strong> Provides real-time weighted pipeline calculations, stage-gate analytics, and deal risk alerts.</li>
+    </ul>
+
+    <h3>1.2 Target Success Metrics & KPIs</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric / KPI</th>
+          <th>Historical Baseline</th>
+          <th>SmartCRM AI Target</th>
+          <th>Measurement Methodology</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Daily CRM Admin Time</td>
+          <td>45 mins / sales rep / day</td>
+          <td>&lt; 15 mins / rep / day</td>
+          <td>Application session telemetry</td>
+        </tr>
+        <tr>
+          <td>Lead Qualification Speed</td>
+          <td>4-8 hours post-submission</td>
+          <td>&lt; 5 minutes</td>
+          <td>Timestamp from creation to qualification</td>
+        </tr>
+        <tr>
+          <td>Outreach Draft Time</td>
+          <td>15 mins / personalized email</td>
+          <td>&lt; 30 seconds</td>
+          <td>AI email generation events</td>
+        </tr>
+        <tr>
+          <td>Pipeline Forecast Variance</td>
+          <td>35% margin of error</td>
+          <td>&lt; 12% margin of error</td>
+          <td>Quarterly closed-won comparison</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>2. User Personas & Core Journeys</h2>
+    <h3>2.1 Account Executives (AEs)</h3>
+    <ul>
+      <li><strong>Responsibilities:</strong> Running discovery, delivering demos, sending proposals, negotiating contracts, and closing deals.</li>
+      <li><strong>Primary Workflows:</strong> Visual Kanban deal progression, AI meeting preparation summaries, deal probability weighting, and next-action scheduling.</li>
+    </ul>
+
+    <h3>2.2 Sales Development Reps (SDRs)</h3>
+    <ul>
+      <li><strong>Responsibilities:</strong> Cold prospecting, qualifying inbound inquiries, conducting conference follow-ups, and booking demos.</li>
+      <li><strong>Primary Workflows:</strong> Automated file-based lead imports, AI lead qualification scoring, duplicate filtering, and instant customized outreach drafting.</li>
+    </ul>
+
+    <h3>2.3 VP of Sales & Revenue Operations (RevOps)</h3>
+    <ul>
+      <li><strong>Responsibilities:</strong> Forecasting quarterly revenue, monitoring conversion rates across channels, and maintaining clean CRM data hygiene.</li>
+      <li><strong>Primary Workflows:</strong> Executive dashboard overview, win rate analytics, channel performance breakdown, and lead import audit logs.</li>
+    </ul>
+
+    <h2>3. System Architecture & Technical Specifications</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+          <th>Function</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Frontend Client</td>
+          <td>React 19, TypeScript, Tailwind CSS v4, Lucide React, Recharts</td>
+          <td>Single-page application with responsive Kanban, real-time charts, and sub-100ms interactions</td>
+        </tr>
+        <tr>
+          <td>Backend Server</td>
+          <td>Express 4, Node.js, TSX runtime</td>
+          <td>RESTful API endpoints, file parsing, duplicate detection, and secure server-side AI proxying</td>
+        </tr>
+        <tr>
+          <td>AI Intelligence Engine</td>
+          <td>Google Gemini 2.5 API (@google/genai)</td>
+          <td>Predictive lead scoring, email drafting, deal summarization, and interactive sales copilot</td>
+        </tr>
+        <tr>
+          <td>Database & Persistence</td>
+          <td>Dual-mode: JSON storage + Supabase PostgreSQL with RLS</td>
+          <td>Zero-config resilient local persistence with full cloud multi-tenant synchronization</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Detailed Functional Requirements</h2>
+    <h3>4.1 Executive Dashboard</h3>
+    <ul>
+      <li><strong>Metric Cards:</strong> Total Pipeline Value ($), Active Deals count, Win Rate (%), Open Tasks, and Weighted Pipeline.</li>
+      <li><strong>Visual Funnel Analytics:</strong> Stage distribution bar charts, revenue forecasts, lead sources breakdown, and deal priorities.</li>
+      <li><strong>Actionable Checklists:</strong> Upcoming tasks and urgent deals requiring immediate attention.</li>
+    </ul>
+
+    <h3>4.2 Lead Management & AI Scoring</h3>
+    <ul>
+      <li><strong>Pipeline Stages:</strong> Structured progression across New, Contacted, Qualified, Proposal, Won, and Lost.</li>
+      <li><strong>Dual Views:</strong> Seamless toggle between interactive drag-and-drop Kanban board and dense sortable Table view.</li>
+      <li><strong>AI Predictive Scoring:</strong> Evaluates prospect details to generate a 0-100 score, scoring rationale, and recommended next step.</li>
+      <li><strong>Smart Sales Actions:</strong> Instant AI Profile Summarizer and Contextual Outreach Drafter.</li>
+    </ul>
+
+    <h3>4.3 Automated Bulk Lead Import Engine</h3>
+    <ul>
+      <li><strong>File Parsing:</strong> Native support for CSV and Microsoft Excel (.xlsx / .xls) files up to 10MB.</li>
+      <li><strong>Column Mapping:</strong> Intelligent auto-detection of header aliases with dropdown overrides.</li>
+      <li><strong>Lead Source Normalization:</strong> Enforces standard channels: <em>Inbound Web</em>, <em>Outbound SDR</em>, <em>Referral</em>, <em>Partner Ecosystem</em>, <em>Conference</em>.</li>
+      <li><strong>Deduplication Engine:</strong> Real-time email validation and duplicate checks against both the CRM database and file rows.</li>
+      <li><strong>Live Validation Preview:</strong> Interactive data grid displaying valid, duplicate, and invalid rows with descriptive error flags.</li>
+      <li><strong>Audit History Log:</strong> Persistent database audit trail tracking import dates, filenames, success counts, and error logs.</li>
+    </ul>
+
+    <h3>4.4 Deal Pipeline & Revenue Tracking</h3>
+    <ul>
+      <li><strong>Stage Progression:</strong> Discovery &rarr; Demo Scheduled &rarr; Proposal Sent &rarr; Negotiation &rarr; Closed Won / Lost.</li>
+      <li><strong>Weighted Forecasting:</strong> Automatic probability weighting per stage for accurate revenue predictions.</li>
+    </ul>
+
+    <h3>4.5 AI Sales Copilot</h3>
+    <ul>
+      <li><strong>Grounded Sales Assistant:</strong> Conversational sidebar assistant with real-time access to user pipeline metrics and customer accounts.</li>
+      <li><strong>Capabilities:</strong> Answering pipeline queries, identifying at-risk deals, drafting custom proposals, and coaching sales tactics.</li>
+    </ul>
+
+    <h2>5. Security, Governance & Compliance</h2>
+    <ul>
+      <li><strong>Server-Side Secret Isolation:</strong> Gemini API keys and database credentials are strictly guarded on the backend server.</li>
+      <li><strong>Multi-Tenant Isolation:</strong> Supabase Row Level Security (RLS) policies enforce strict user boundaries.</li>
+      <li><strong>Validation & Sanitization:</strong> Strict payload size caps, MIME-type checks, and regex email validation.</li>
+    </ul>
+
+    <footer>
+      <span>SmartCRM AI &bull; Product Requirements Document (PRD)</span>
+      <span>Confidential &bull; Version 2.4</span>
+    </footer>
+  </div>
+</body>
+</html>
