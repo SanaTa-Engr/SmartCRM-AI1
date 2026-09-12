@@ -18,7 +18,8 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Normalize /api prefix if stripped by reverse proxies or Vercel serverless rewrites
 app.use((req, res, next) => {
@@ -282,6 +283,30 @@ app.delete('/api/leads/:id', (req, res) => {
   const userId = getUserId(req);
   const ok = db.deleteLead(userId, req.params.id);
   res.json({ success: ok });
+});
+
+// Automated Lead Import API
+app.get('/api/leads/import-history', (req, res) => {
+  const userId = getUserId(req);
+  res.json(db.getImportHistory(userId));
+});
+
+app.post('/api/leads/import', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { filename, leads, skipDuplicates } = req.body;
+    if (!Array.isArray(leads) || leads.length === 0) {
+      return res.status(400).json({ error: 'No lead records provided for import' });
+    }
+    const result = await db.importLeads(userId, {
+      filename: filename || 'leads_import.csv',
+      leads,
+      skipDuplicates: skipDuplicates !== false,
+    });
+    res.status(201).json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Import failed' });
+  }
 });
 
 // --- Deals API ---

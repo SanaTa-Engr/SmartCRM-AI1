@@ -11,6 +11,8 @@ import {
   SalesPipelineReport,
   DealStage,
   LeadStage,
+  LeadImportRecord,
+  LeadImportResult,
 } from './types';
 import { getSeedData } from '../server/seedData';
 import { generateSmartSalesResponse } from './aiEngine';
@@ -35,6 +37,7 @@ class ClientStore {
   private tasksKey = 'smartcrm_tasks';
   private notesKey = 'smartcrm_notes';
   private activitiesKey = 'smartcrm_activities';
+  private importHistoryKey = 'smartcrm_lead_import_history';
 
   constructor() {
     this.initIfEmpty();
@@ -352,6 +355,151 @@ class ClientStore {
     const leads = this.getLeads().filter(l => l.id !== id);
     this.setItems(this.leadsKey, leads);
     return true;
+  }
+
+  // Automated Lead Import
+  getImportHistory(): LeadImportRecord[] {
+    this.initIfEmpty();
+    return this.getItems<LeadImportRecord>(this.importHistoryKey);
+  }
+
+  importLeads(payload: { filename: string; leads: Partial<Lead>[]; skipDuplicates?: boolean }): LeadImportResult {
+    const { filename, leads: rawLeads, skipDuplicates = true } = payload;
+    const leads = this.getLeads();
+    const user = this.getCurrentUser();
+    const existingEmails = new Set(leads.map(l => (l.email || '').toLowerCase().trim()).filter(Boolean));
+    const seenBatchEmails = new Set<string>();
+
+    const newLeads: Lead[] = [];
+    const errors: { row: number; field?: string; message: string }[] = [];
+    let skippedCount = 0;
+    let invalidCount = 0;
+
+    const validStages: LeadStage[] = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost'];
+    const validSources = ['Inbound Web', 'Outbound SDR', 'Referral', 'Partner Ecosystem', 'Conference'];
+
+    rawLeads.forEach((raw, idx) => {
+      const rowNum = idx + 1;
+      const name = (raw.name || '').trim();
+      const company = (raw.company || '').trim();
+      const email = (raw.email || '').toLowerCase().trim();
+
+      if (!name) {
+        invalidCount++;
+        errors.push({ row: rowNum, field: 'name', message: 'Missing required field: Full Name' });
+        return;
+      }
+      if (!company) {
+        invalidCount++;
+        errors.push({ row: rowNum, field: 'company', message: 'Missing required field: Company Name' });
+        return;
+      }
+
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        invalidCount++;
+        errors.push({ row: rowNum, field: 'email', message: `Invalid email address format: "${email}"` });
+        return;
+      }
+
+      if (email) {
+        if (existingEmails.has(email)) {
+          if (skipDuplicates) {
+            skippedCount++;
+            errors.push({ row: rowNum, field: 'email', message: `Duplicate email with existing CRM lead (${email})` });
+            return;
+          }
+        }
+        if (seenBatchEmails.has(email)) {
+          if (skipDuplicates) {
+            skippedCount++;
+            errors.push({ row: rowNum, field: 'email', message: `Duplicate email within file (${email})` });
+            return;
+          }
+        }
+        seenBatchEmails.add(email);
+      }
+
+      let stage: LeadStage = 'New';
+      if (raw.stage && validStages.includes(raw.stage as LeadStage)) {
+        stage = raw.stage as LeadStage;
+      }
+
+      let source = 'Inbound Web';
+      if (raw.source && validSources.includes(raw.source)) {
+        source = raw.source;
+      } else if (raw.source) {
+        const s = raw.source.toLowerCase();
+        if (s.includes('outbound') || s.includes('sdr') || s.includes('cold')) source = 'Outbound SDR';
+        else if (s.includes('referral') || s.includes('mouth')) source = 'Referral';
+        else if (s.includes('partner') || s.includes('alliance')) source = 'Partner Ecosystem';
+        else if (s.includes('conference') || s.includes('event')) source = 'Conference';
+        else source = 'Inbound Web';
+      }
+
+      const estimatedValue = Number(raw.estimatedValue) >= 0 ? Number(raw.estimatedValue) : 10000;
+      const score = Number(raw.score) >= 0 && Number(raw.score) <= 100 ? Math.round(Number(raw.score)) : 70;
+
+      const lead: Lead = {
+        id: 'lead-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        userId: user.id,
+        name,
+        email,
+        phone: (raw.phone || '').trim(),
+        company,
+        title: (raw.title || '').trim(),
+        stage,
+        estimatedValue,
+        source,
+        score,
+        scoreReason: raw.scoreReason || `Imported from ${filename}`,
+        nextAction: raw.nextAction || 'Schedule introductory qualification call',
+        assignedTo: raw.assignedTo || user.name || 'You',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      newLeads.push(lead);
+      if (email) existingEmails.add(email);
+    });
+
+    if (newLeads.length > 0) {
+      leads.unshift(...newLeads);
+      this.setItems(this.leadsKey, leads);
+    }
+
+    const status = newLeads.length === rawLeads.length ? 'completed' : (newLeads.length > 0 ? 'partial' : 'failed');
+    const historyRecord: LeadImportRecord = {
+      id: 'imp-' + Date.now(),
+      userId: user.id,
+      filename,
+      totalRows: rawLeads.length,
+      importedCount: newLeads.length,
+      skippedCount,
+      invalidCount,
+      status,
+      errors: errors.slice(0, 50),
+      createdAt: new Date().toISOString(),
+    };
+
+    const history = this.getImportHistory();
+    history.unshift(historyRecord);
+    this.setItems(this.importHistoryKey, history);
+
+    this.logActivity({
+      type: 'note',
+      description: `Imported ${newLeads.length} leads from "${filename}" (${skippedCount} duplicates skipped)`,
+      entityType: 'lead',
+      entityName: `${newLeads.length} Leads`,
+    });
+
+    return {
+      success: true,
+      importedCount: newLeads.length,
+      skippedCount,
+      invalidCount,
+      totalRows: rawLeads.length,
+      importRecord: historyRecord,
+    };
   }
 
   // Deals CRUD

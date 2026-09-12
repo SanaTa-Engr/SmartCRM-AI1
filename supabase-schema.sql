@@ -133,6 +133,20 @@ CREATE TABLE IF NOT EXISTS public.activities (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 9. LEAD IMPORT HISTORY TABLE (Automated Lead Import audit log)
+CREATE TABLE IF NOT EXISTS public.lead_import_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  total_rows INTEGER NOT NULL DEFAULT 0,
+  imported_count INTEGER NOT NULL DEFAULT 0,
+  skipped_count INTEGER NOT NULL DEFAULT 0,
+  invalid_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT DEFAULT 'completed' CHECK (status IN ('completed', 'partial', 'failed')),
+  errors JSONB DEFAULT '[]'::JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes for high-performance filtering & lookup
 CREATE INDEX IF NOT EXISTS idx_contacts_user_id ON public.contacts(user_id);
 CREATE INDEX IF NOT EXISTS idx_companies_user_id ON public.companies(user_id);
@@ -141,6 +155,7 @@ CREATE INDEX IF NOT EXISTS idx_deals_user_stage ON public.deals(user_id, stage);
 CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON public.tasks(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_notes_user_entity ON public.notes(user_id, entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_activities_user_id ON public.activities(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lead_import_history_user_id ON public.lead_import_history(user_id, created_at DESC);
 
 -- Enable Row Level Security (RLS) on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -151,6 +166,7 @@ ALTER TABLE public.deals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lead_import_history ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: users can only view, insert, update and delete their own records
 CREATE POLICY "Users can manage own profile" ON public.profiles
@@ -175,4 +191,7 @@ CREATE POLICY "Users can manage own notes" ON public.notes
   FOR ALL USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage own activities" ON public.activities
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own lead imports" ON public.lead_import_history
   FOR ALL USING (auth.uid() = user_id);

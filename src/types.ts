@@ -165,3 +165,41 @@ export interface AIChatMessage {
   timestamp: string;
   suggestions?: string[];
 }
+
+export const SUPPORTED_LEAD_SOURCES = [
+  'Inbound Web',
+  'Outbound SDR',
+  'Referral',
+  'Partner Ecosystem',
+  'Conference',
+] as const;
+
+export type SupportedLeadSource = typeof SUPPORTED_LEAD_SOURCES[number];
+
+export interface LeadImportRecord {
+  id: string;
+  userId: string;
+  filename: string;
+  totalRows: number;
+  importedCount: number;
+  skippedCount: number;
+  invalidCount: number;
+  status: 'completed' | 'partial' | 'failed';
+  errors?: { row: number; field?: string; message: string }[];
+  createdAt: string;
+}
+
+export interface LeadImportPayload {
+  filename: string;
+  leads: Partial<Lead>[];
+  skipDuplicates?: boolean;
+}
+
+export interface LeadImportResult {
+  success: boolean;
+  importedCount: number;
+  skippedCount: number;
+  invalidCount: number;
+  totalRows: number;
+  importRecord?: LeadImportRecord;
+}

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { User, Contact, Company, Lead, Deal, Task, Note, Activity } from '../src/types';
+import { User, Contact, Company, Lead, Deal, Task, Note, Activity, LeadImportRecord, LeadImportResult, LeadStage } from '../src/types';
 import { getSeedData } from './seedData';
 
 interface UserRecord extends User {
@@ -19,6 +19,7 @@ interface DatabaseSchema {
   tasks: Task[];
   notes: Note[];
   activities: Activity[];
+  leadImportHistory?: LeadImportRecord[];
 }
 
 const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
@@ -64,6 +65,7 @@ class DatabaseService {
         this.db.tasks = this.db.tasks || [];
         this.db.notes = this.db.notes || [];
         this.db.activities = this.db.activities || [];
+        this.db.leadImportHistory = this.db.leadImportHistory || [];
       } else {
         this.save();
       }
@@ -652,6 +654,224 @@ class DatabaseService {
     this.save();
     this.syncToSupabase('leads', 'delete', { id });
     return this.db.leads.length < initialLen;
+  }
+
+  // --- Automated Lead Import & History ---
+  public getImportHistory(userId: string): LeadImportRecord[] {
+    return (this.db.leadImportHistory || [])
+      .filter(h => h.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  public async importLeads(
+    userId: string,
+    payload: {
+      filename: string;
+      leads: Array<Partial<Lead>>;
+      skipDuplicates?: boolean;
+    }
+  ): Promise<LeadImportResult> {
+    const { filename, leads: rawLeads, skipDuplicates = true } = payload;
+    const existingLeads = this.getLeads(userId);
+    const existingEmails = new Set(existingLeads.map(l => (l.email || '').toLowerCase().trim()).filter(Boolean));
+    const seenBatchEmails = new Set<string>();
+
+    const newLeads: Lead[] = [];
+    const errors: { row: number; field?: string; message: string }[] = [];
+    let skippedCount = 0;
+    let invalidCount = 0;
+
+    const validStages: LeadStage[] = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost'];
+    const validSources = ['Inbound Web', 'Outbound SDR', 'Referral', 'Partner Ecosystem', 'Conference'];
+
+    rawLeads.forEach((raw, idx) => {
+      const rowNum = idx + 1;
+      const name = (raw.name || '').trim();
+      const company = (raw.company || '').trim();
+      const email = (raw.email || '').toLowerCase().trim();
+
+      // Required fields check
+      if (!name) {
+        invalidCount++;
+        errors.push({ row: rowNum, field: 'name', message: 'Missing required field: Full Name' });
+        return;
+      }
+      if (!company) {
+        invalidCount++;
+        errors.push({ row: rowNum, field: 'company', message: 'Missing required field: Company Name' });
+        return;
+      }
+
+      // Email format check
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        invalidCount++;
+        errors.push({ row: rowNum, field: 'email', message: `Invalid email address format: "${email}"` });
+        return;
+      }
+
+      // Duplicate detection
+      if (email) {
+        if (existingEmails.has(email)) {
+          if (skipDuplicates) {
+            skippedCount++;
+            errors.push({ row: rowNum, field: 'email', message: `Duplicate email: Lead already exists in CRM with email "${email}"` });
+            return;
+          }
+        }
+        if (seenBatchEmails.has(email)) {
+          if (skipDuplicates) {
+            skippedCount++;
+            errors.push({ row: rowNum, field: 'email', message: `Duplicate email: Duplicate lead found within import file for "${email}"` });
+            return;
+          }
+        }
+        seenBatchEmails.add(email);
+      }
+
+      // Stage normalization
+      let stage: LeadStage = 'New';
+      if (raw.stage && validStages.includes(raw.stage as LeadStage)) {
+        stage = raw.stage as LeadStage;
+      }
+
+      // Source normalization matching supported sources:
+      // Inbound Web, Outbound SDR, Referral, Partner Ecosystem, Conference
+      let source = 'Inbound Web';
+      if (raw.source && validSources.includes(raw.source)) {
+        source = raw.source;
+      } else if (raw.source) {
+        const s = raw.source.toLowerCase();
+        if (s.includes('outbound') || s.includes('sdr') || s.includes('cold') || s.includes('prospect')) {
+          source = 'Outbound SDR';
+        } else if (s.includes('referral') || s.includes('mouth') || s.includes('friend')) {
+          source = 'Referral';
+        } else if (s.includes('partner') || s.includes('ecosystem') || s.includes('alliance') || s.includes('affiliate')) {
+          source = 'Partner Ecosystem';
+        } else if (s.includes('conference') || s.includes('event') || s.includes('summit') || s.includes('expo') || s.includes('trade show')) {
+          source = 'Conference';
+        } else {
+          source = 'Inbound Web';
+        }
+      }
+
+      // Value & Score
+      const estimatedValue = Number(raw.estimatedValue) >= 0 ? Number(raw.estimatedValue) : 0;
+      const score = Number(raw.score) >= 0 && Number(raw.score) <= 100 ? Math.round(Number(raw.score)) : 50;
+
+      const lead: Lead = {
+        id: 'lead-' + crypto.randomUUID().slice(0, 8),
+        userId,
+        name,
+        email,
+        phone: (raw.phone || '').trim(),
+        company,
+        title: (raw.title || '').trim(),
+        stage,
+        estimatedValue,
+        source,
+        score,
+        scoreReason: raw.scoreReason || `Imported from ${filename}`,
+        nextAction: raw.nextAction || 'Schedule introductory qualification call',
+        assignedTo: raw.assignedTo || 'You',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      newLeads.push(lead);
+      if (email) existingEmails.add(email);
+    });
+
+    // Add new leads to local/embedded database
+    if (newLeads.length > 0) {
+      this.db.leads.unshift(...newLeads);
+    }
+
+    // Sync to Supabase in batch if configured
+    if (this.isSupabaseConfigured && this.supabase && newLeads.length > 0) {
+      try {
+        const supabaseRows = newLeads.map(l => ({
+          id: l.id,
+          user_id: l.userId,
+          name: l.name,
+          email: l.email,
+          phone: l.phone,
+          company: l.company,
+          title: l.title,
+          stage: l.stage,
+          estimated_value: l.estimatedValue,
+          source: l.source,
+          score: l.score,
+          score_reason: l.scoreReason,
+          next_action: l.nextAction,
+          created_at: l.createdAt,
+        }));
+        const { error } = await this.supabase.from('leads').upsert(supabaseRows);
+        if (error) console.warn('Supabase batch lead import sync note:', error.message);
+      } catch (err: any) {
+        console.warn('Supabase batch import error:', err?.message);
+      }
+    }
+
+    // Create import history record
+    const status = newLeads.length === rawLeads.length
+      ? 'completed'
+      : newLeads.length > 0
+      ? 'partial'
+      : 'failed';
+
+    const historyRecord: LeadImportRecord = {
+      id: 'imp-' + crypto.randomUUID().slice(0, 8),
+      userId,
+      filename,
+      totalRows: rawLeads.length,
+      importedCount: newLeads.length,
+      skippedCount,
+      invalidCount,
+      status,
+      errors: errors.slice(0, 50),
+      createdAt: new Date().toISOString(),
+    };
+
+    this.db.leadImportHistory = this.db.leadImportHistory || [];
+    this.db.leadImportHistory.unshift(historyRecord);
+
+    // Sync history record to Supabase
+    if (this.isSupabaseConfigured && this.supabase) {
+      this.syncToSupabase('lead_import_history', 'insert', {
+        id: historyRecord.id,
+        user_id: historyRecord.userId,
+        filename: historyRecord.filename,
+        total_rows: historyRecord.totalRows,
+        imported_count: historyRecord.importedCount,
+        skipped_count: historyRecord.skippedCount,
+        invalid_count: historyRecord.invalidCount,
+        status: historyRecord.status,
+        errors: historyRecord.errors,
+        created_at: historyRecord.createdAt,
+      });
+    }
+
+    // Log Activity in Timeline
+    this.logActivity(
+      userId,
+      'note',
+      `Imported ${newLeads.length} leads from "${filename}" (${skippedCount} duplicates skipped, ${invalidCount} invalid rows skipped)`,
+      'lead',
+      newLeads[0]?.id,
+      `${newLeads.length} Leads`,
+      { filename, importedCount: newLeads.length, skippedCount, invalidCount }
+    );
+
+    this.save();
+
+    return {
+      success: true,
+      importedCount: newLeads.length,
+      skippedCount,
+      invalidCount,
+      totalRows: rawLeads.length,
+      importRecord: historyRecord,
+    };
   }
 
   // --- Deals CRUD ---
